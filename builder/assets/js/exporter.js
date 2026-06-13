@@ -56,7 +56,7 @@
     var files = [{ path: 'tour.js', content: manifestToTourJs(manifest) }];
 
     var jobs = VIEWER_FILES.map(function (pair) {
-      return fetch(pair[0]).then(function (r) {
+      return fetch(pair[0], { cache: 'no-store' }).then(function (r) {
         if (!r.ok) { throw new Error('Could not fetch ' + pair[0] + ' (run from the local server, not file://)'); }
         return r.text();
       }).then(function (text) { files.push({ path: pair[1], content: text }); });
@@ -64,7 +64,7 @@
 
     var logoP = (project.logo
       ? Promise.resolve(project.logo)
-      : fetch('../viewer/assets/logo.png').then(function (r) { return r.blob(); }))
+      : fetch('../viewer/assets/logo.png', { cache: 'no-store' }).then(function (r) { return r.blob(); }))
       .then(function (blob) { files.push({ path: 'assets/logo.png', content: blob }); });
     jobs.push(logoP);
 
