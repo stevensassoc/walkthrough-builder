@@ -152,11 +152,13 @@
     }));
   }
   function blobToBase64(blob) {
-    return new Promise(function (resolve, reject) {
-      var fr = new root.FileReader();
-      fr.onload = function () { resolve(String(fr.result).split(',')[1]); };
-      fr.onerror = reject;
-      fr.readAsDataURL(blob);
+    // arrayBuffer() is more robust than FileReader for larger image blobs.
+    return blob.arrayBuffer().then(function (buf) {
+      var bytes = new Uint8Array(buf), binary = '', chunk = 0x8000;
+      for (var i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+      }
+      return root.btoa(binary);
     });
   }
 
