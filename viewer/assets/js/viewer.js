@@ -92,17 +92,19 @@
     if (!useTransition) { currentIndex = index; showScene(s); updateChrome(); return; }
 
     transitioning = true;
-    showTransition();   // fade the cover overlay in (CSS handles the timing)
-    var pre = dir
-      ? engine.animateView({ yaw: dir.yaw, pitch: dir.pitch, fov: engine.getView().fov * 0.55 }, 300)
-      : wait(190);      // rail / Next-Back: a plain quick fade (no direction)
-    pre.then(function () {
-      currentIndex = index; showScene(s); updateChrome();
-      return wait(40);  // let the new frame render under the cover
-    }).then(function () {
-      hideTransition();
-      transitioning = false;
-    });
+    function swapUnderCover() {
+      return wait(290).then(function () {           // wait for the cover to go fully opaque
+        currentIndex = index; showScene(s); updateChrome();
+        return wait(60);                            // let the new frame render under the cover
+      }).then(function () { hideTransition(); transitioning = false; });
+    }
+    if (dir) {
+      // 1) dolly toward the arrow IN THE CLEAR (no cover yet) so the movement is visible
+      engine.animateView({ yaw: dir.yaw, pitch: dir.pitch, fov: engine.getView().fov * 0.5 }, 320)
+        .then(function () { showTransition(); return swapUnderCover(); });   // 2) then fade + swap
+    } else {
+      showTransition(); swapUnderCover();           // rail / Next-Back: plain fade only
+    }
   }
 
   function updateChrome() {
