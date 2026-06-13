@@ -19,6 +19,7 @@
       accent: '#3a8f9c',
       logo: null,
       cover: null,        // optional welcome-screen cover image (Blob)
+      transition: 'move', // area-change effect: 'move' | 'none'
       quality: 4096,
       scenes: []
     };
@@ -57,6 +58,7 @@
       showWelcome: true
     };
     if (project.cover) { meta.cover = 'assets/cover.jpg'; }
+    if (project.transition === 'none') { meta.transition = 'none'; }   // 'move' is the default
     return {
       meta: meta,
       scenes: project.scenes.map(function (s) {

@@ -60,7 +60,9 @@
     var active = null;            // active scene handle
     var interactCb = null;
     var readyCb = null;
+    var tween = null;            // active view tween (for area-change "move" transition)
     var reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    function nowMs() { return (root.performance && root.performance.now) ? root.performance.now() : Date.now(); }
 
     var tmp = new THREE.Vector3();
     var camDir = new THREE.Vector3();
@@ -92,6 +94,7 @@
 
     function show(handle, initialView) {
       active = handle;
+      tween = null;   // cancel any in-flight view tween on a scene swap
       applyTexture(handle);
       if (initialView) {
         yaw = initialView.yaw || 0;
@@ -140,6 +143,20 @@
       if (v.fov != null) { fov = clampFov(v.fov); }
     }
     function nudgeFov(delta) { fov = clampFov(fov + delta); }
+
+    // Tween yaw/pitch/fov toward a target over durationMs; resolves when done.
+    function animateView(to, durationMs) {
+      return new Promise(function (resolve) {
+        tween = {
+          fy: yaw, fp: pitch, ff: fov,
+          ty: (to.yaw != null) ? to.yaw : yaw,
+          tp: (to.pitch != null) ? clampPitch(to.pitch) : pitch,
+          tf: (to.fov != null) ? clampFov(to.fov) : fov,
+          t0: nowMs(), dur: durationMs || 280, resolve: resolve
+        };
+      });
+    }
+    function isReducedMotion() { return reduceMotion; }
 
     function clampFov(f) { return Math.max(MIN_FOV, Math.min(MAX_FOV, f)); }
     function clampPitch(p) { return Math.max(-MAX_PITCH, Math.min(MAX_PITCH, p)); }
@@ -213,7 +230,14 @@
 
     function animate() {
       requestAnimationFrame(animate);
-      if (autorotating && !dragging && !reduceMotion) { yaw += AUTO_SPEED; }
+      if (tween) {
+        var tt = Math.min(1, (nowMs() - tween.t0) / tween.dur);
+        var e = tt * tt * (3 - 2 * tt);   // smoothstep ease
+        yaw = tween.fy + (tween.ty - tween.fy) * e;
+        pitch = clampPitch(tween.fp + (tween.tp - tween.fp) * e);
+        fov = clampFov(tween.ff + (tween.tf - tween.ff) * e);
+        if (tt >= 1) { var r = tween.resolve; tween = null; if (r) { r(); } }
+      } else if (autorotating && !dragging && !reduceMotion) { yaw += AUTO_SPEED; }
       else if (!dragging && !reduceMotion) {
         yaw += yawV; pitch = clampPitch(pitch + pitchV);
         yawV *= FRICTION; pitchV *= FRICTION;
@@ -264,6 +288,8 @@
       clear: clear,
       onReady: onReady,
       isActiveReady: isActiveReady,
+      animateView: animateView,
+      isReducedMotion: isReducedMotion,
     };
   }
 

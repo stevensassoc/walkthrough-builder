@@ -568,6 +568,7 @@
     if (project.logo) { brandLogoUrl = URL.createObjectURL(project.logo); img.src = brandLogoUrl; }
     else { img.src = '../viewer/assets/logo.png'; }
     document.getElementById('brandAccent').value = project.accent || '#3a8f9c';
+    document.getElementById('brandTransition').checked = project.transition !== 'none';
   }
   function initBranding() {
     applyAccent();
@@ -577,6 +578,7 @@
     document.getElementById('brandingDone').addEventListener('click', function () { dlg.hidden = true; });
     dlg.addEventListener('click', function (e) { if (e.target === dlg) { dlg.hidden = true; } });
     document.getElementById('brandAccent').addEventListener('input', function (e) { project.accent = e.target.value; applyAccent(); scheduleSave(); });
+    document.getElementById('brandTransition').addEventListener('change', function (e) { project.transition = e.target.checked ? 'move' : 'none'; scheduleSave(); });
     document.getElementById('brandLogoUpload').addEventListener('click', function () {
       var inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/png,image/jpeg,image/svg+xml';
       inp.addEventListener('change', function () { var f = inp.files[0]; if (!f) { return; } project.logo = f; reflectBrand(); scheduleSave(); toast('Logo updated'); });

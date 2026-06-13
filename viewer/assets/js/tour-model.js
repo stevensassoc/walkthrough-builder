@@ -49,6 +49,7 @@
       logo: meta.logo || null,
       cover: meta.cover || null,
       accent: meta.accent || '#3a8f9c',
+      transition: meta.transition === 'none' ? 'none' : 'move',  // area-change effect
       autoRotate: meta.autoRotate === true,
       showWelcome: meta.showWelcome !== false
     };

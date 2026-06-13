@@ -13,6 +13,8 @@
   var counterEl = document.getElementById('counter');
   var errorEl = document.getElementById('errorMsg');
   var spinnerEl = document.getElementById('spinner');
+  var transEl = document.getElementById('transition');
+  var transitioning = false;
 
   // State
   var meta = null;
@@ -45,7 +47,7 @@
     wireNav();
     wireControls();
     wireWelcome();
-    goToScene(0);
+    goToScene(0, { instant: true });   // no transition on first load (welcome covers it)
     if (meta.autoRotate) { startRotate(); }   // off by default; honors manifest opt-in
   }
 
@@ -66,19 +68,41 @@
     });
   }
 
-  function goToScene(index) {
+  function showScene(s) {
+    hideError();
+    engine.show(s.handle, s.data.initialView);
+    if (engine.isActiveReady()) { hideSpinner(); } else { showSpinner(); }
+  }
+  function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function showTransition() { if (transEl) { transEl.classList.add('on'); } }
+  function hideTransition() { if (transEl) { transEl.classList.remove('on'); } }
+
+  // opts.dir = {yaw,pitch} of the clicked link → "move toward it" dolly; opts.instant skips effects.
+  function goToScene(index, opts) {
     index = ((index % scenes.length) + scenes.length) % scenes.length;
-    currentIndex = index;
+    if (transitioning) { return; }
     var s = scenes[index];
     if (playing) { stopRotate(); }
-    if (s.broken) {
-      showError('Image unavailable for "' + s.data.name + '"');
-    } else {
-      hideError();
-      engine.show(s.handle, s.data.initialView);
-      if (engine.isActiveReady()) { hideSpinner(); } else { showSpinner(); }
-    }
-    updateChrome();
+    if (s.broken) { currentIndex = index; showError('Image unavailable for "' + s.data.name + '"'); updateChrome(); return; }
+
+    var dir = opts && opts.dir;
+    var useTransition = !(opts && opts.instant) && meta.transition !== 'none'
+      && !engine.isReducedMotion() && scenes.length > 1;
+
+    if (!useTransition) { currentIndex = index; showScene(s); updateChrome(); return; }
+
+    transitioning = true;
+    showTransition();   // fade the cover overlay in (CSS handles the timing)
+    var pre = dir
+      ? engine.animateView({ yaw: dir.yaw, pitch: dir.pitch, fov: engine.getView().fov * 0.55 }, 300)
+      : wait(190);      // rail / Next-Back: a plain quick fade (no direction)
+    pre.then(function () {
+      currentIndex = index; showScene(s); updateChrome();
+      return wait(40);  // let the new frame render under the cover
+    }).then(function () {
+      hideTransition();
+      transitioning = false;
+    });
   }
 
   function updateChrome() {
@@ -272,7 +296,7 @@
       tip.textContent = h.label || (TOUR.scenes[idx].name || 'Go');
       el.appendChild(tip);
 
-      el.addEventListener('click', function (ev) { ev.stopPropagation(); goToScene(idx); });
+      el.addEventListener('click', function (ev) { ev.stopPropagation(); goToScene(idx, { dir: { yaw: h.yaw, pitch: h.pitch } }); });
       stopPropagation(el);
       engine.addHotspot(s.handle, el, h.yaw, h.pitch);
     });

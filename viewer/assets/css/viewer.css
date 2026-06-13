@@ -25,6 +25,11 @@ img { -webkit-user-drag: none; }
   border-top-color: var(--accent-bright); border-radius: 50%; animation: spin 0.9s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* Area-change "move-through" cover (fades to black while the camera dollies + swaps) */
+#transition { position: absolute; inset: 0; z-index: 48; background: #0a0e13;
+  opacity: 0; pointer-events: none; transition: opacity 0.26s ease; }
+#transition.on { opacity: 1; pointer-events: auto; }
+
 /* Glass panel helper */
 .glass, #titleBar, #rail #railList, #guide, .ctl, #railToggle {
   background: var(--panel); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
