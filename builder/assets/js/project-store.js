@@ -18,6 +18,7 @@
       subtitle: opts.subtitle || '',
       accent: '#3a8f9c',
       logo: null,
+      cover: null,        // optional welcome-screen cover image (Blob)
       quality: 4096,
       scenes: []
     };
@@ -47,15 +48,17 @@
   }
 
   function projectToManifest(project) {
+    var meta = {
+      title: project.title,
+      subtitle: project.subtitle,
+      logo: 'assets/logo.png',
+      accent: project.accent,
+      autoRotate: false,
+      showWelcome: true
+    };
+    if (project.cover) { meta.cover = 'assets/cover.jpg'; }
     return {
-      meta: {
-        title: project.title,
-        subtitle: project.subtitle,
-        logo: 'assets/logo.png',
-        accent: project.accent,
-        autoRotate: false,
-        showWelcome: true
-      },
+      meta: meta,
       scenes: project.scenes.map(function (s) {
         return {
           id: s.id,
@@ -127,9 +130,11 @@
     var meta = JSON.parse(JSON.stringify(project));     // strip blobs for json
     meta.scenes.forEach(function (s) { s.image = 'panos/' + s.id + '.jpg'; });
     meta.logo = project.logo ? 'logo.png' : null;
+    meta.cover = project.cover ? 'cover.jpg' : null;
     zip.file('project.json', JSON.stringify(meta, null, 2));
     project.scenes.forEach(function (s) { zip.file('panos/' + s.id + '.jpg', s.image); });
     if (project.logo) { zip.file('logo.png', project.logo); }
+    if (project.cover) { zip.file('cover.jpg', project.cover); }
     return zip.generateAsync({ type: 'blob' });
   }
 
@@ -143,6 +148,9 @@
         });
         if (project.logo) {
           jobs.push(zip.file('logo.png').async('blob').then(function (b) { project.logo = b; }));
+        }
+        if (project.cover) {
+          jobs.push(zip.file('cover.jpg').async('blob').then(function (b) { project.cover = b; }));
         }
         return Promise.all(jobs).then(function () { return project; });
       });

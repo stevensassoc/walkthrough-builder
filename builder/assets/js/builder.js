@@ -316,7 +316,7 @@
 
   function loadProjectIntoEditor(p) {
     Object.keys(urlCache).forEach(function (k) { URL.revokeObjectURL(urlCache[k]); });
-    project = p; reflectMeta();
+    project = p; reflectMeta(); updateCoverButton();
     urlCache = {}; handleCache = {}; currentId = project.scenes[0] ? project.scenes[0].id : null;
     renderFilmstrip(); if (currentId) { selectArea(currentId); }
   }
@@ -491,6 +491,26 @@
     });
   }
   initMyTours();
+
+  // ---- project cover image (welcome screen) ----
+  function updateCoverButton() {
+    var b = document.getElementById('btnCover');
+    if (b) { b.textContent = project.cover ? 'Cover ✓' : 'Cover…'; }
+  }
+  function initCover() {
+    updateCoverButton();
+    document.getElementById('btnCover').addEventListener('click', function (e) {
+      if (project.cover && e.shiftKey) { project.cover = null; updateCoverButton(); scheduleSave(); toast('Cover removed'); return; }
+      var inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/jpeg,image/png';
+      inp.addEventListener('change', function () {
+        var f = inp.files[0]; if (!f) { return; }
+        IU.fileToBitmap(f).then(function (bmp) { return IU.downscaleToBlob(bmp, 1920); })
+          .then(function (blob) { project.cover = blob; updateCoverButton(); scheduleSave(); toast('Cover image set'); });
+      });
+      inp.click();
+    });
+  }
+  initCover();
 
   // expose a few internals for later tasks (same-file)
   window.__builder = { get project() { return project; }, get currentId() { return currentId; },

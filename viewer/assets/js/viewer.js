@@ -95,6 +95,12 @@
     else { document.getElementById('welcomeLogo').style.display = 'none'; }
     document.getElementById('welcomeTitle').textContent = meta.title;
     document.getElementById('welcomeSubtitle').textContent = meta.subtitle;
+    if (meta.cover) {
+      var w = document.getElementById('welcome');
+      w.style.background = 'linear-gradient(rgba(9,13,18,0.45), rgba(9,13,18,0.62)), url("' +
+        meta.cover + '") center / cover no-repeat';
+      w.classList.add('has-cover');
+    }
   }
 
   function wireWelcome() {

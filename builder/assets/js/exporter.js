@@ -72,6 +72,8 @@
       files.push({ path: 'assets/panos/' + s.id + '.jpg', content: s.image });
     });
 
+    if (project.cover) { files.push({ path: 'assets/cover.jpg', content: project.cover }); }
+
     return Promise.all(jobs).then(function () { return files; });
   }
 

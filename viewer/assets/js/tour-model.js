@@ -47,6 +47,7 @@
       title: meta.title || 'Walkthrough',
       subtitle: meta.subtitle || '',
       logo: meta.logo || null,
+      cover: meta.cover || null,
       accent: meta.accent || '#3a8f9c',
       autoRotate: meta.autoRotate === true,
       showWelcome: meta.showWelcome !== false
