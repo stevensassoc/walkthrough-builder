@@ -29,7 +29,8 @@
     var THREE = window.THREE;
 
     // --- Three.js core ---
-    var renderer = new THREE.WebGLRenderer({ antialias: true });
+    // preserveDrawingBuffer lets us read the canvas (snapshot) on demand for covers.
+    var renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
     renderer.setPixelRatio(window.devicePixelRatio || 1);
     if ('outputEncoding' in renderer) { renderer.outputEncoding = THREE.sRGBEncoding; }
     panoEl.appendChild(renderer.domElement);
@@ -212,6 +213,14 @@
       return viewFromDirection(v.x, v.y, v.z);
     }
 
+    // Snapshot the current panorama view (no hotspots — they're separate DOM) as a JPEG Blob.
+    function snapshot() {
+      return new Promise(function (resolve) {
+        renderer.render(scene, camera);   // ensure the latest frame is in the buffer
+        renderer.domElement.toBlob(function (blob) { resolve(blob); }, 'image/jpeg', 0.9);
+      });
+    }
+
     return {
       load: load,
       show: show,
@@ -224,6 +233,7 @@
       onInteract: onInteract,
       resize: resize,
       screenToView: screenToView,
+      snapshot: snapshot,
     };
   }
 

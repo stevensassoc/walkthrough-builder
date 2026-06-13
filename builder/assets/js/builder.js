@@ -492,22 +492,24 @@
   }
   initMyTours();
 
-  // ---- project cover image (welcome screen) ----
+  // ---- welcome cover (snapshot the current view, like "Set start view") ----
   function updateCoverButton() {
-    var b = document.getElementById('btnCover');
-    if (b) { b.textContent = project.cover ? 'Cover ✓' : 'Cover…'; }
+    var b = document.getElementById('btnSetCover');
+    if (!b) { return; }
+    b.classList.toggle('set', !!project.cover);
+    b.title = project.cover
+      ? 'Cover set from a view — click to replace, Shift-click to remove'
+      : 'Use the current view as the welcome cover — Shift-click to remove';
   }
   function initCover() {
     updateCoverButton();
-    document.getElementById('btnCover').addEventListener('click', function (e) {
+    document.getElementById('btnSetCover').addEventListener('click', function (e) {
       if (project.cover && e.shiftKey) { project.cover = null; updateCoverButton(); scheduleSave(); toast('Cover removed'); return; }
-      var inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/jpeg,image/png';
-      inp.addEventListener('change', function () {
-        var f = inp.files[0]; if (!f) { return; }
-        IU.fileToBitmap(f).then(function (bmp) { return IU.downscaleToBlob(bmp, 1920); })
-          .then(function (blob) { project.cover = blob; updateCoverButton(); scheduleSave(); toast('Cover image set'); });
-      });
-      inp.click();
+      if (!sceneById(currentId)) { toast('Open an area first.'); return; }
+      engine.snapshot()
+        .then(function (blob) { return IU.fileToBitmap(blob); })
+        .then(function (bmp) { return IU.downscaleToBlob(bmp, 1920); })
+        .then(function (blob) { project.cover = blob; updateCoverButton(); scheduleSave(); toast('Cover set from current view'); });
     });
   }
   initCover();
