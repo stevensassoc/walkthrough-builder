@@ -105,11 +105,16 @@
   }
 
   function removeArea(id) {
+    var sc = sceneById(id);
+    if (sc && !window.confirm('Remove area "' + sc.name + '"? This cannot be undone.')) { return; }
     if (urlCache[id]) { URL.revokeObjectURL(urlCache[id]); delete urlCache[id]; }
-    delete handleCache[id];
+    if (handleCache[id]) { engine.dispose(handleCache[id]); delete handleCache[id]; }
     PS.removeScene(project, id);
-    if (currentId === id) { currentId = project.scenes[0] ? project.scenes[0].id : null;
-      if (currentId) { selectArea(currentId); } }
+    if (currentId === id) {
+      currentId = project.scenes[0] ? project.scenes[0].id : null;
+      if (currentId) { selectArea(currentId); }
+      else { engine.clear(); selected = null; renderProps(); }
+    }
     renderFilmstrip(); scheduleSave();
   }
 
@@ -123,15 +128,40 @@
     }, 600);
   }
 
-  function toast(msg) {
+  function toast(msg, persist) {
     var t = document.getElementById('toast'); t.textContent = msg; t.hidden = false;
-    clearTimeout(toast._t); toast._t = setTimeout(function () { t.hidden = true; }, 2600);
+    t.onclick = function () { t.hidden = true; };   // click to dismiss
+    clearTimeout(toast._t);
+    if (!persist) { toast._t = setTimeout(function () { t.hidden = true; }, 2600); }
   }
+  function hideToast() { var t = document.getElementById('toast'); t.hidden = true; clearTimeout(toast._t); }
 
   function esc(s) {
     return String(s == null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
+
+  // ---- modal focus management (a11y) ----
+  var MODAL_IDS = ['help', 'exported', 'settings', 'published', 'mytours', 'branding', 'picker'];
+  function modalFocusables(el) {
+    return Array.prototype.slice.call(el.querySelectorAll('button, input, select, textarea, a[href]'))
+      .filter(function (n) { return !n.disabled && n.offsetParent !== null; });
+  }
+  function focusInto(el) { var f = modalFocusables(el); if (f[0]) { try { f[0].focus(); } catch (e) {} } }
+  function openModalEl(id) { var el = document.getElementById(id); el.hidden = false; focusInto(el); }
+  // One handler traps Tab inside, and closes on Esc, for whichever dialog is open.
+  document.addEventListener('keydown', function (e) {
+    var openEl = null;
+    for (var i = 0; i < MODAL_IDS.length; i++) { var d = document.getElementById(MODAL_IDS[i]); if (d && !d.hidden) { openEl = d; } }
+    if (!openEl) { return; }
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); openEl.hidden = true; return; }
+    if (e.key === 'Tab') {
+      var f = modalFocusables(openEl); if (!f.length) { return; }
+      var first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }, true);
 
   // ---- authoring: modes + hotspots + properties ----
   var mode = 'look';                 // 'look' | 'link' | 'note'
@@ -181,13 +211,7 @@
     });
 
     document.addEventListener('keydown', function (e) {
-      var helpEl = document.getElementById('help');
-      var expEl = document.getElementById('exported');
-      if (e.key === 'Escape' && !helpEl.hidden) { helpEl.hidden = true; return; }
-      if (e.key === 'Escape' && expEl && !expEl.hidden) { expEl.hidden = true; return; }
-      var openPubDlg = ['settings', 'published', 'mytours'].map(function (id) { return document.getElementById(id); })
-        .filter(function (d) { return d && !d.hidden; })[0];
-      if (e.key === 'Escape' && openPubDlg) { openPubDlg.hidden = true; return; }
+      // (modal Esc/focus-trap is handled globally by the capture-phase handler above)
       var tag = e.target && e.target.tagName;
       var typing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
       if (e.key === 'Escape') {
@@ -214,7 +238,7 @@
   function refreshHotspots() {
     var s = sceneById(currentId); if (!s) { return; }
     var handle = handleFor(s);
-    handle.hotspots = [];
+    var spots = [];
     s.linkHotspots.forEach(function (h, i) {
       var el = document.createElement('div'); el.className = 'hotspot link-hotspot';
       var arrow = document.createElement('span'); arrow.className = 'link-arrow'; arrow.textContent = '➤';
@@ -222,15 +246,15 @@
       el.appendChild(arrow);
       el.addEventListener('pointerdown', function (ev) { ev.stopPropagation(); select(s, 'link', i); dragHot = { scene: s, kind: 'link', index: i, startX: ev.clientX, startY: ev.clientY, moved: false }; });
       el.addEventListener('click', function (ev) { ev.stopPropagation(); select(s, 'link', i); });
-      engine.addHotspot(handle, el, h.yaw, h.pitch);
+      spots.push({ el: el, yaw: h.yaw, pitch: h.pitch });
     });
     s.infoHotspots.forEach(function (h, i) {
       var el = document.createElement('div'); el.className = 'hotspot info-hotspot'; el.textContent = 'i';
       el.addEventListener('pointerdown', function (ev) { ev.stopPropagation(); select(s, 'info', i); dragHot = { scene: s, kind: 'info', index: i, startX: ev.clientX, startY: ev.clientY, moved: false }; });
       el.addEventListener('click', function (ev) { ev.stopPropagation(); select(s, 'info', i); });
-      engine.addHotspot(handle, el, h.yaw, h.pitch);
+      spots.push({ el: el, yaw: h.yaw, pitch: h.pitch });
     });
-    engine.show(handle, engine.getView());
+    engine.setHotspots(handle, spots);   // re-render hotspots without a full show() (no view reset / inertia kill)
     markSelected();
   }
 
@@ -316,9 +340,11 @@
 
   function loadProjectIntoEditor(p) {
     Object.keys(urlCache).forEach(function (k) { URL.revokeObjectURL(urlCache[k]); });
-    project = p; reflectMeta(); updateCoverButton();
+    Object.keys(handleCache).forEach(function (k) { engine.dispose(handleCache[k]); });
+    project = p; reflectMeta(); updateCoverButton(); applyAccent();
     urlCache = {}; handleCache = {}; currentId = project.scenes[0] ? project.scenes[0].id : null;
-    renderFilmstrip(); if (currentId) { selectArea(currentId); }
+    renderFilmstrip();
+    if (currentId) { selectArea(currentId); } else { engine.clear(); }
   }
 
   function initTopbar() {
@@ -326,24 +352,27 @@
       var manifest = PS.projectToManifest(project);
       var v = window.TourModel.validateTour(manifest);
       if (!v.ok) { toast('Cannot export: ' + v.errors[0]); return; }
-      toast('Building ZIP…');
+      toast('Building ZIP…', true);
       window.Exporter.buildTourZip(project, manifest)
-        .then(function (blob) { download(blob, project.id + '.zip'); document.getElementById('exported').hidden = false; })
-        .catch(function (err) { toast(err.message || 'Export failed'); });
+        .then(function (blob) { hideToast(); download(blob, project.id + '.zip'); openModalEl('exported'); })
+        .catch(function (err) { toast((err && err.message) || 'Export failed', true); });
     });
     document.getElementById('btnSaveFile').addEventListener('click', function () {
-      PS.saveProjectFile(project).then(function (blob) { download(blob, project.id + '.satour.zip'); });
+      PS.saveProjectFile(project).then(function (blob) { download(blob, project.id + '.satour.zip'); })
+        .catch(function (err) { toast((err && err.message) || 'Could not save project'); });
     });
     document.getElementById('btnOpenFile').addEventListener('click', function () {
       var inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.zip,.satour.zip';
       inp.addEventListener('change', function () {
-        PS.openProjectFile(inp.files[0]).then(function (p) { loadProjectIntoEditor(p); scheduleSave(); toast('Project opened'); });
+        PS.openProjectFile(inp.files[0])
+          .then(function (p) { loadProjectIntoEditor(p); scheduleSave(); toast('Project opened'); })
+          .catch(function (err) { toast((err && err.message) || 'Could not open project file'); });
       });
       inp.click();
     });
 
     var help = document.getElementById('help');
-    document.getElementById('btnHelp').addEventListener('click', function () { help.hidden = false; });
+    document.getElementById('btnHelp').addEventListener('click', function () { openModalEl('help'); });
     document.getElementById('helpClose').addEventListener('click', function () { help.hidden = true; });
     help.addEventListener('click', function (e) { if (e.target === help) { help.hidden = true; } });
 
@@ -356,18 +385,20 @@
   function bootPicker() {
     PS.listProjects().then(function (projects) {
       if (!projects.length) { return; }
-      var pick = document.getElementById('picker'); pick.hidden = false;
-      pick.innerHTML = '<div style="background:#131c25;border:1px solid #243240;border-radius:12px;padding:18px;min-width:320px;max-width:80%">'
-        + '<div style="font-weight:600;margin-bottom:12px">Open a saved tour</div><div id="pkList"></div>'
+      var pick = document.getElementById('picker');
+      pick.innerHTML = '<div class="help-panel" style="max-width:380px">'
+        + '<h2>Open a saved tour</h2><div id="pkList"></div>'
         + '<button id="pkNew" class="tb" style="margin-top:12px">Start a new tour</button></div>';
       var list = pick.querySelector('#pkList');
       projects.forEach(function (p) {
-        var b = document.createElement('div'); b.className = 'tb'; b.style.cssText = 'display:block;margin-bottom:8px;cursor:pointer';
+        var b = document.createElement('button'); b.type = 'button'; b.className = 'tb';
+        b.style.cssText = 'display:block;width:100%;text-align:left;margin-bottom:8px';
         b.textContent = (p.title || p.id) + '  ·  ' + p.scenes.length + ' areas';
         b.addEventListener('click', function () { loadProjectIntoEditor(p); pick.hidden = true; });
         list.appendChild(b);
       });
       pick.querySelector('#pkNew').addEventListener('click', function () { pick.hidden = true; });
+      openModalEl('picker');
     }).catch(function () { /* no IndexedDB: just start empty */ });
   }
 
@@ -382,7 +413,7 @@
     document.getElementById('setIsOrg').checked = s.isOrg !== false;
     document.getElementById('setRepo').value = s.repo || 'tours';
     document.getElementById('setDomain').value = s.customDomain || '';
-    document.getElementById('settings').hidden = false;
+    openModalEl('settings');
   }
   function initPublishSettings() {
     document.getElementById('settingsClose').addEventListener('click', function () { document.getElementById('settings').hidden = true; });
@@ -396,6 +427,11 @@
       };
       if (!SS.isComplete(s)) { toast('Token, owner and repo are required.'); return; }
       SS.save(s); document.getElementById('settings').hidden = true; toast('Settings saved');
+    });
+    document.getElementById('settingsClear').addEventListener('click', function () {
+      SS.clear();
+      document.getElementById('setToken').value = '';
+      toast('Saved settings cleared from this browser');
     });
   }
   initPublishSettings();
@@ -418,12 +454,15 @@
       var v = window.TourModel.validateTour(manifest);
       if (!v.ok) { toast('Cannot publish: ' + v.errors[0]); return; }
 
-      toast('Publishing… preparing files');
+      var totalMB = project.scenes.reduce(function (n, s) { return n + (s.image ? s.image.size : 0); }, 0) / (1024 * 1024);
+      if (totalMB > 80 && !window.confirm('This tour is ~' + Math.round(totalMB) + ' MB. Large tours approach GitHub Pages limits and publish slowly. Continue?')) { return; }
+
+      toast('Publishing… preparing files', true);
       var client = window.GitHubClient(settings.token, window.fetch.bind(window));
       window.Exporter.gatherTourFiles(project, manifest)
         .then(window.Publisher.encodeFiles)
         .then(function (files) {
-          toast('Publishing… uploading to GitHub');
+          toast('Publishing… uploading to GitHub', true);
           return window.Publisher.publish(client, {
             owner: settings.owner, repo: settings.repo, isOrg: settings.isOrg,
             slug: project.id, title: project.title || project.id, subtitle: project.subtitle,
@@ -431,11 +470,13 @@
           });
         })
         .then(function (res) {
+          hideToast();
           var a = document.getElementById('publishedLink');
-          a.href = res.url; a.textContent = res.url;
-          published.hidden = false;
+          a.href = /^https:\/\//.test(res.url) ? res.url : '#';   // never trust into href without https
+          a.textContent = res.url;
+          openModalEl('published');
         })
-        .catch(function (err) { console.error('[publish] failed:', err, err && err.data); toast(publishError(err)); });
+        .catch(function (err) { console.error('[publish] failed:', err, err && err.status); toast(publishError(err), true); });
     });
   }
 
@@ -459,7 +500,7 @@
     document.getElementById('btnMyTours').addEventListener('click', function () {
       var settings = SS.load();
       if (!SS.isComplete(settings)) { toast('Set up publishing first.'); openSettings(); return; }
-      dlg.hidden = false;
+      openModalEl('mytours');
       var list = document.getElementById('mytoursList');
       list.innerHTML = '<p class="muted">Loading…</p>';
       var client = window.GitHubClient(settings.token, window.fetch.bind(window));
@@ -475,7 +516,7 @@
           var copy = document.createElement('span'); copy.className = 'mt-act'; copy.textContent = 'Copy';
           copy.addEventListener('click', function () { if (navigator.clipboard) { navigator.clipboard.writeText(t.url); toast('Link copied'); } });
           var open = document.createElement('span'); open.className = 'mt-act'; open.textContent = 'Open';
-          open.addEventListener('click', function () { window.open(t.url, '_blank'); });
+          open.addEventListener('click', function () { if (/^https:\/\//.test(t.url)) { window.open(t.url, '_blank', 'noopener'); } });
           var del = document.createElement('span'); del.className = 'mt-del'; del.textContent = 'Remove';
           del.addEventListener('click', function () {
             if (!window.confirm('Remove "' + (t.title || t.slug) + '" from the published site?')) { return; }
@@ -487,7 +528,11 @@
           row.appendChild(main); row.appendChild(copy); row.appendChild(open); row.appendChild(del);
           list.appendChild(row);
         });
-      }).catch(function (err) { list.innerHTML = '<p class="muted">' + publishError(err) + '</p>'; });
+      }).catch(function (err) {
+        list.innerHTML = '';
+        var p = document.createElement('p'); p.className = 'muted'; p.textContent = publishError(err);
+        list.appendChild(p);
+      });
     });
   }
   initMyTours();
@@ -514,8 +559,37 @@
   }
   initCover();
 
-  // expose a few internals for later tasks (same-file)
-  window.__builder = { get project() { return project; }, get currentId() { return currentId; },
-    sceneById: sceneById, renderFilmstrip: renderFilmstrip, selectArea: selectArea,
-    engine: engine, toast: toast, scheduleSave: function () { scheduleSave(); } };
+  // ---- branding (logo + accent color) ----
+  var brandLogoUrl = null;
+  function applyAccent() { document.documentElement.style.setProperty('--accent', project.accent || '#3a8f9c'); }
+  function reflectBrand() {
+    var img = document.getElementById('brandLogoImg');
+    if (brandLogoUrl) { URL.revokeObjectURL(brandLogoUrl); brandLogoUrl = null; }
+    if (project.logo) { brandLogoUrl = URL.createObjectURL(project.logo); img.src = brandLogoUrl; }
+    else { img.src = '../viewer/assets/logo.png'; }
+    document.getElementById('brandAccent').value = project.accent || '#3a8f9c';
+  }
+  function initBranding() {
+    applyAccent();
+    var dlg = document.getElementById('branding');
+    document.getElementById('btnBrand').addEventListener('click', function () { reflectBrand(); openModalEl('branding'); });
+    document.getElementById('brandingClose').addEventListener('click', function () { dlg.hidden = true; });
+    document.getElementById('brandingDone').addEventListener('click', function () { dlg.hidden = true; });
+    dlg.addEventListener('click', function (e) { if (e.target === dlg) { dlg.hidden = true; } });
+    document.getElementById('brandAccent').addEventListener('input', function (e) { project.accent = e.target.value; applyAccent(); scheduleSave(); });
+    document.getElementById('brandLogoUpload').addEventListener('click', function () {
+      var inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/png,image/jpeg,image/svg+xml';
+      inp.addEventListener('change', function () { var f = inp.files[0]; if (!f) { return; } project.logo = f; reflectBrand(); scheduleSave(); toast('Logo updated'); });
+      inp.click();
+    });
+    document.getElementById('brandLogoDefault').addEventListener('click', function () { project.logo = null; reflectBrand(); scheduleSave(); toast('Using default logo'); });
+  }
+  initBranding();
+
+  // dev-only debug hook (not exposed on the public hosted site)
+  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+    window.__builder = { get project() { return project; }, get currentId() { return currentId; },
+      sceneById: sceneById, renderFilmstrip: renderFilmstrip, selectArea: selectArea,
+      engine: engine, toast: toast, scheduleSave: function () { scheduleSave(); } };
+  }
 })();

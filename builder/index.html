@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https://api.github.com; object-src 'none'; base-uri 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Walkthrough Builder</title>
 <link rel="stylesheet" href="assets/css/builder.css">
@@ -18,6 +19,7 @@
         <option value="2048">Web (2048)</option>
       </select>
     </label>
+    <button id="btnBrand" class="tb" title="Logo &amp; accent colour for this tour">Brand…</button>
     <span class="spacer"></span>
     <button id="btnOpenFile" class="tb">Open</button>
     <button id="btnSaveFile" class="tb">Save</button>
@@ -53,9 +55,9 @@
   </main>
 
   <div id="toast" hidden></div>
-  <div id="picker" hidden></div>
+  <div id="picker" hidden role="dialog" aria-modal="true" aria-label="Open a saved tour"></div>
 
-  <div id="help" hidden>
+  <div id="help" hidden role="dialog" aria-modal="true" aria-label="Help and keyboard shortcuts">
     <div class="help-panel">
       <button id="helpClose" class="help-close" aria-label="Close">✕</button>
       <h2><span id="brandMarkHelp">S&amp;A</span> Walkthrough Builder — Help</h2>
@@ -82,7 +84,7 @@
     </div>
   </div>
 
-  <div id="exported" hidden>
+  <div id="exported" hidden role="dialog" aria-modal="true" aria-label="Tour exported">
     <div class="help-panel">
       <button id="exportedClose" class="help-close" aria-label="Close">✕</button>
       <h2>Tour exported &#10003;</h2>
@@ -90,14 +92,14 @@
       <p>If you just double-click <b>index.html</b>, the buttons load but the 360&deg; photos stay blank, because browsers block local files from loading into the 3D view for security.</p>
       <h3>To view or share it</h3>
       <ol>
-        <li><b>Publish it</b> &mdash; upload the unzipped folder to any static web host (e.g. GitHub Pages). It works at that URL and you can share the link. <i>The upcoming Publish feature will do this for you.</i></li>
+        <li><b>Publish it</b> &mdash; or just use the <b>Publish</b> button to upload it to GitHub Pages and get a shareable link automatically. (Manual option: upload the unzipped folder to any static web host.)</li>
         <li><b>Preview locally</b> &mdash; in a terminal in the folder, run <span class="help-key">python -m http.server 8000</span> and open the address it prints. (See the <b>HOW TO PUBLISH THIS TOUR.txt</b> inside the ZIP.)</li>
       </ol>
       <button id="exportedOk" class="tb primary" style="margin-top:16px">Got it</button>
     </div>
   </div>
 
-  <div id="settings" hidden>
+  <div id="settings" hidden role="dialog" aria-modal="true" aria-label="Publish settings">
     <div class="help-panel">
       <button id="settingsClose" class="help-close" aria-label="Close">✕</button>
       <h2>Publish settings</h2>
@@ -107,12 +109,15 @@
       <label><input id="setIsOrg" type="checkbox" checked style="width:auto;margin-right:6px">Owner is an organization</label>
       <label>Repository</label><input id="setRepo" value="tours">
       <label>Custom domain (optional)</label><input id="setDomain" placeholder="tours.stevensassoc.com">
-      <p class="muted" style="font-size:11px;margin-top:12px">The token grants write access to the org's repos and is stored only in this browser. Use it on trusted machines and revoke it on GitHub if a machine is lost. It is sent only to api.github.com.</p>
-      <button id="settingsSave" class="tb primary" style="margin-top:14px">Save settings</button>
+      <p class="muted" style="font-size:11px;margin-top:12px">The token grants write access to the org's repos and is stored only in this browser. Use it on trusted machines and revoke it on GitHub if a machine is lost. It is sent only to api.github.com. For tighter scope, a <b>fine-grained token</b> limited to the <b>tours</b> repo (Contents + Pages: write) also works.</p>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button id="settingsSave" class="tb primary">Save settings</button>
+        <button id="settingsClear" class="tb">Clear saved token</button>
+      </div>
     </div>
   </div>
 
-  <div id="published" hidden>
+  <div id="published" hidden role="dialog" aria-modal="true" aria-label="Published">
     <div class="help-panel">
       <button id="publishedClose" class="help-close" aria-label="Close">✕</button>
       <h2>Published &#10003;</h2>
@@ -123,11 +128,28 @@
     </div>
   </div>
 
-  <div id="mytours" hidden>
+  <div id="mytours" hidden role="dialog" aria-modal="true" aria-label="My Tours">
     <div class="help-panel">
       <button id="mytoursClose" class="help-close" aria-label="Close">✕</button>
       <h2>My Tours</h2>
       <div id="mytoursList"><p class="muted">Loading…</p></div>
+    </div>
+  </div>
+
+  <div id="branding" hidden role="dialog" aria-modal="true" aria-label="Branding">
+    <div class="help-panel">
+      <button id="brandingClose" class="help-close" aria-label="Close">✕</button>
+      <h2>Branding</h2>
+      <p class="muted">Sets the logo and accent colour for this tour's viewer and welcome screen.</p>
+      <label>Logo</label>
+      <div class="brand-logo-row">
+        <span id="brandLogoChip"><img id="brandLogoImg" alt="Logo preview"></span>
+        <button id="brandLogoUpload" class="tb">Upload…</button>
+        <button id="brandLogoDefault" class="tb">Use default</button>
+      </div>
+      <label>Accent colour</label>
+      <input id="brandAccent" type="color" value="#3a8f9c">
+      <button id="brandingDone" class="tb primary" style="margin-top:16px">Done</button>
     </div>
   </div>
 

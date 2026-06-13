@@ -76,7 +76,11 @@
       if (base) { return base; }
       var seed = '# Stevens & Associates virtual tours\n';
       var content = root.btoa ? root.btoa(seed) : Buffer.from(seed).toString('base64');
-      return client.putFile(o, r, 'README.md', content, 'Initialize tours site').then(function () {
+      return client.putFile(o, r, 'README.md', content, 'Initialize tours site').then(function (res) {
+        // Use the seed commit's own sha/tree — avoids a 2nd getRef that can race GitHub replication.
+        if (res && res.commit && res.commit.sha && res.commit.tree) {
+          return { sha: res.commit.sha, tree: res.commit.tree.sha };
+        }
         return getBaseOrNull(client, o, r, branch);
       });
     });

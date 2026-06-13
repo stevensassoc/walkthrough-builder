@@ -14,8 +14,16 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg);
   color: var(--text); font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
 button { font-family: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
 img { -webkit-user-drag: none; }
+:focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 2px; }
 
 #pano { position: absolute; inset: 0; }
+
+/* Loading spinner */
+#spinner { position: absolute; inset: 0; z-index: 45; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+#spinner[hidden] { display: none; }
+.spin-ring { width: 44px; height: 44px; border: 3px solid rgba(255,255,255,0.18);
+  border-top-color: var(--accent-bright); border-radius: 50%; animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* Glass panel helper */
 .glass, #titleBar, #rail #railList, #guide, .ctl, #railToggle {
@@ -42,7 +50,8 @@ img { -webkit-user-drag: none; }
 .rail-label { font-size: 10px; letter-spacing: 0.6px; text-transform: uppercase;
   color: var(--text-muted); margin: 2px 4px 8px; }
 .rail-item { display: flex; align-items: center; gap: 9px; padding: 6px; border-radius: 6px;
-  border-left: 2px solid transparent; margin-bottom: 4px; transition: background 0.15s; }
+  border-left: 2px solid transparent; margin-bottom: 4px; transition: background 0.15s;
+  width: 100%; text-align: left; }
 .rail-item:hover { background: rgba(255,255,255,0.06); }
 .rail-item.current { background: rgba(111,208,223,0.16); border-left-color: var(--accent-bright); }
 .rail-thumb { width: 46px; height: 30px; border-radius: 4px; object-fit: cover; flex-shrink: 0;
@@ -111,3 +120,12 @@ img { -webkit-user-drag: none; }
 
 /* Single-scene tours hide guided nav + rail toggle */
 body.single-scene #guide, body.single-scene #rail { display: none; }
+
+/* Mobile crash-floor: clients often open tour links on phones. Not a full mobile
+   pass — just prevent the fixed-width rail from overlapping the header/controls. */
+@media (max-width: 600px) {
+  #rail, #railToggle { display: none; }
+  #brandHeader { left: 14px !important; }
+  #titleBar { max-width: 100%; }
+  #guide { left: 50%; right: auto; }
+}

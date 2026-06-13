@@ -51,7 +51,6 @@
       },
       createCommit: function (o, r, message, tree, parents) { return req('POST', '/repos/' + o + '/' + r + '/git/commits', { message: message, tree: tree, parents: parents }); },
       updateRef: function (o, r, ref, sha) { return req('PATCH', '/repos/' + o + '/' + r + '/git/refs/' + ref, { sha: sha }); },
-      createRef: function (o, r, ref, sha) { return req('POST', '/repos/' + o + '/' + r + '/git/refs', { ref: ref, sha: sha }); },
       putFile: function (o, r, path, content, message, branch) {
         var body = { message: message, content: content };
         if (branch) { body.branch = branch; }

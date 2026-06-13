@@ -143,15 +143,16 @@
     return JSZip.loadAsync(file).then(function (zip) {
       return zip.file('project.json').async('string').then(function (txt) {
         var project = JSON.parse(txt);
+        function readEntry(path) {
+          var e = zip.file(path);
+          if (!e) { return Promise.reject(new Error('Project file is missing "' + path + '"')); }
+          return e.async('blob');
+        }
         var jobs = project.scenes.map(function (s) {
-          return zip.file('panos/' + s.id + '.jpg').async('blob').then(function (b) { s.image = b; });
+          return readEntry('panos/' + s.id + '.jpg').then(function (b) { s.image = b; });
         });
-        if (project.logo) {
-          jobs.push(zip.file('logo.png').async('blob').then(function (b) { project.logo = b; }));
-        }
-        if (project.cover) {
-          jobs.push(zip.file('cover.jpg').async('blob').then(function (b) { project.cover = b; }));
-        }
+        if (project.logo) { jobs.push(readEntry('logo.png').then(function (b) { project.logo = b; })); }
+        if (project.cover) { jobs.push(readEntry('cover.jpg').then(function (b) { project.cover = b; })); }
         return Promise.all(jobs).then(function () { return project; });
       });
     });

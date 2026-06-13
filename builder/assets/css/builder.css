@@ -79,8 +79,13 @@ button { font:inherit; color:inherit; border:0; background:none; cursor:pointer;
 #help[hidden], #exported[hidden], #settings[hidden], #published[hidden], #mytours[hidden] { display:none; }
 .help-panel a { color:var(--accent-bright); }
 .help-panel label { display:block; font-size:11px; color:var(--muted); margin:12px 0 4px; }
-.help-panel input:not([type=checkbox]) { width:100%; background:var(--panel2); border:1px solid var(--line);
+.help-panel input:not([type=checkbox]):not([type=color]) { width:100%; background:var(--panel2); border:1px solid var(--line);
   color:var(--text); border-radius:6px; padding:8px; font:inherit; font-size:13px; }
+.help-panel input[type=color] { width:56px; height:36px; padding:2px; border:1px solid var(--line);
+  border-radius:6px; background:var(--panel2); cursor:pointer; }
+.brand-logo-row { display:flex; align-items:center; gap:12px; margin-bottom:4px; }
+#brandLogoChip { background:#fff; border-radius:8px; padding:6px 10px; display:inline-flex; }
+#brandLogoImg { height:34px; display:block; max-width:160px; }
 .help-panel p { font-size:13px; line-height:1.6; color:var(--text); margin:10px 0; }
 .help-panel p b { color:#fff; }
 .mytour { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--line); font-size:13px; }

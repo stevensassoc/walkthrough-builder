@@ -59,6 +59,8 @@
     var autorotating = false;
     var active = null;            // active scene handle
     var interactCb = null;
+    var readyCb = null;
+    var reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
     var tmp = new THREE.Vector3();
     var camDir = new THREE.Vector3();
@@ -74,7 +76,7 @@
           if ('encoding' in tex) { tex.encoding = THREE.sRGBEncoding; }
           handle.texture = tex;
           handle.ready = true;
-          if (active === handle) { applyTexture(handle); }
+          if (active === handle) { applyTexture(handle); if (readyCb) { readyCb(); } }
         },
         undefined,
         function () { handle.broken = true; if (onError) { onError(handle); } }
@@ -106,6 +108,29 @@
       handle.hotspots.push({ el: el, yaw: yawA, pitch: pitchA });
       if (active === handle) { hotspotLayer.appendChild(el); }
     }
+
+    // Replace a handle's hotspots and re-render them without a full show() —
+    // used by the Builder during live editing/drag (no texture swap, no view reset).
+    function setHotspots(handle, hotspots) {
+      handle.hotspots = hotspots ? hotspots.slice() : [];
+      if (active === handle) {
+        hotspotLayer.innerHTML = '';
+        handle.hotspots.forEach(function (hs) { hotspotLayer.appendChild(hs.el); });
+      }
+    }
+
+    function dispose(handle) {
+      if (handle && handle.texture) { handle.texture.dispose(); handle.texture = null; handle.ready = false; }
+    }
+
+    function clear() {   // blank the viewport (e.g. when the last area is deleted)
+      active = null;
+      material.map = null; material.color.set(0x222a33); material.needsUpdate = true;
+      hotspotLayer.innerHTML = '';
+    }
+
+    function onReady(cb) { readyCb = cb; }
+    function isActiveReady() { return !!(active && active.ready); }
 
     // ---------- view ----------
     function getView() { return { yaw: yaw, pitch: pitch, fov: fov }; }
@@ -188,13 +213,13 @@
 
     function animate() {
       requestAnimationFrame(animate);
-      if (autorotating && !dragging) { yaw += AUTO_SPEED; }
-      else if (!dragging) {
+      if (autorotating && !dragging && !reduceMotion) { yaw += AUTO_SPEED; }
+      else if (!dragging && !reduceMotion) {
         yaw += yawV; pitch = clampPitch(pitch + pitchV);
         yawV *= FRICTION; pitchV *= FRICTION;
         if (Math.abs(yawV) < 1e-5) { yawV = 0; }
         if (Math.abs(pitchV) < 1e-5) { pitchV = 0; }
-      }
+      } else if (reduceMotion) { yawV = pitchV = 0; }
       camera.fov = fov * 180 / Math.PI;
       camera.updateProjectionMatrix();
       direction(yaw, pitch, tmp);
@@ -234,6 +259,11 @@
       resize: resize,
       screenToView: screenToView,
       snapshot: snapshot,
+      setHotspots: setHotspots,
+      dispose: dispose,
+      clear: clear,
+      onReady: onReady,
+      isActiveReady: isActiveReady,
     };
   }
 

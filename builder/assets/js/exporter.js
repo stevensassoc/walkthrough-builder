@@ -64,7 +64,10 @@
 
     var logoP = (project.logo
       ? Promise.resolve(project.logo)
-      : fetch('../viewer/assets/logo.png', { cache: 'no-store' }).then(function (r) { return r.blob(); }))
+      : fetch('../viewer/assets/logo.png', { cache: 'no-store' }).then(function (r) {
+          if (!r.ok) { throw new Error('Could not load the default logo'); }
+          return r.blob();
+        }))
       .then(function (blob) { files.push({ path: 'assets/logo.png', content: blob }); });
     jobs.push(logoP);
 

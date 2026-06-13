@@ -2,15 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Walkthrough</title>
 <link rel="stylesheet" href="assets/css/viewer.css">
 </head>
 <body>
   <div id="pano"></div>
+  <div id="spinner" hidden aria-hidden="true"><div class="spin-ring"></div></div>
 
   <header id="brandHeader">
-    <div id="logoChip"><img id="logoImg" alt=""></div>
+    <div id="logoChip"><img id="logoImg" alt="Logo"></div>
     <div id="titleBar">
       <span id="projTitle"></span><span id="sep"> · </span><span id="sceneTitle"></span>
     </div>
@@ -32,9 +34,9 @@
     <button id="btnFull" class="ctl" aria-label="Toggle fullscreen">⛶</button>
   </div>
 
-  <div id="welcome">
+  <div id="welcome" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
     <div id="welcomeInner">
-      <div id="welcomeLogo"><img id="welcomeLogoImg" alt=""></div>
+      <div id="welcomeLogo"><img id="welcomeLogoImg" alt="Logo"></div>
       <h1 id="welcomeTitle"></h1>
       <p id="welcomeSubtitle"></p>
       <button id="welcomeBegin">Begin Walkthrough ▶</button>

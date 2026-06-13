@@ -12,6 +12,7 @@
   var sceneTitle = document.getElementById('sceneTitle');
   var counterEl = document.getElementById('counter');
   var errorEl = document.getElementById('errorMsg');
+  var spinnerEl = document.getElementById('spinner');
 
   // State
   var meta = null;
@@ -37,6 +38,7 @@
 
     engine = PanoEngine(panoEl);
     engine.onInteract(function () { if (playing) { stopRotate(); } });
+    engine.onReady(hideSpinner);   // hide the loading spinner when the active scene's texture arrives
 
     buildScenes();
     buildRail();
@@ -74,6 +76,7 @@
     } else {
       hideError();
       engine.show(s.handle, s.data.initialView);
+      if (engine.isActiveReady()) { hideSpinner(); } else { showSpinner(); }
     }
     updateChrome();
   }
@@ -82,11 +85,22 @@
     var s = scenes[currentIndex];
     sceneTitle.textContent = s.data.name || '';
     counterEl.textContent = (currentIndex + 1) + ' / ' + scenes.length;
+    document.title = meta.title + (s.data.name ? ' — ' + s.data.name : '');
+    var titleBar = document.getElementById('titleBar');
+    if (titleBar) { titleBar.title = meta.title + (s.data.name ? ' · ' + s.data.name : ''); }
+    var nextBtn = document.getElementById('btnNext');
+    if (nextBtn) { nextBtn.textContent = (currentIndex === scenes.length - 1) ? '↺ Start over' : 'Next ▶'; }
     updateRailHighlight();
   }
 
   function showError(msg) { errorEl.textContent = msg; errorEl.hidden = false; }
   function hideError() { errorEl.hidden = true; }
+  function showSpinner() { if (spinnerEl) { spinnerEl.hidden = false; panoEl.setAttribute('aria-busy', 'true'); } }
+  function hideSpinner() { if (spinnerEl) { spinnerEl.hidden = true; panoEl.setAttribute('aria-busy', 'false'); } }
+  function closeInfoCards() {
+    var open = document.querySelectorAll('#hotspots .info-hotspot.open');
+    for (var i = 0; i < open.length; i++) { open[i].classList.remove('open'); }
+  }
 
   // ---------- branding / welcome ----------
   function applyBrandingWelcome() {
@@ -106,8 +120,13 @@
   function wireWelcome() {
     var welcome = document.getElementById('welcome');
     if (!meta.showWelcome) { welcome.classList.add('hidden'); return; }
-    function dismiss() { welcome.classList.add('hidden'); }
-    document.getElementById('welcomeBegin').addEventListener('click', dismiss);
+    var beginBtn = document.getElementById('welcomeBegin');
+    beginBtn.focus();
+    function dismiss() {
+      welcome.classList.add('hidden');
+      var nb = document.getElementById('btnNext'); if (nb) { nb.focus(); }
+    }
+    beginBtn.addEventListener('click', dismiss);
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && !welcome.classList.contains('hidden')) { dismiss(); }
     });
@@ -122,7 +141,8 @@
     list.appendChild(label);
 
     scenes.forEach(function (s, i) {
-      var item = document.createElement('div');
+      var item = document.createElement('button');
+      item.type = 'button';
       item.className = 'rail-item';
       item.setAttribute('data-index', String(i));
 
@@ -155,16 +175,20 @@
     toggle.style.width = '38px';
     toggle.style.height = '38px';
     document.getElementById('brandHeader').style.left = '62px';
-    toggle.addEventListener('click', function () { rail.classList.toggle('collapsed'); });
+    toggle.setAttribute('aria-expanded', 'true');
+    toggle.addEventListener('click', function () {
+      var collapsed = rail.classList.toggle('collapsed');
+      toggle.setAttribute('aria-expanded', String(!collapsed));
+    });
   }
 
   function updateRailHighlight() {
     var items = document.querySelectorAll('.rail-item');
     for (var i = 0; i < items.length; i++) {
       if (Number(items[i].getAttribute('data-index')) === currentIndex) {
-        items[i].classList.add('current');
+        items[i].classList.add('current'); items[i].setAttribute('aria-current', 'true');
       } else {
-        items[i].classList.remove('current');
+        items[i].classList.remove('current'); items[i].removeAttribute('aria-current');
       }
     }
   }
@@ -193,6 +217,8 @@
 
     playBtn.addEventListener('click', function () { playing ? stopRotate() : startRotate(); });
 
+    panoEl.addEventListener('pointerdown', closeInfoCards);   // dragging the pano closes any open note
+
     if (screenfull && screenfull.enabled) {
       fullBtn.addEventListener('click', function () { screenfull.toggle(); });
       screenfull.on('change', function () {
@@ -205,7 +231,7 @@
     document.addEventListener('keydown', function (e) {
       if (e.key === 'f' || e.key === 'F') { if (screenfull && screenfull.enabled) { screenfull.toggle(); } }
       else if (e.key === ' ') { e.preventDefault(); playing ? stopRotate() : startRotate(); }
-      else if (e.key === 'Escape') { if (screenfull && screenfull.isFullscreen) { screenfull.exit(); } }
+      else if (e.key === 'Escape') { closeInfoCards(); if (screenfull && screenfull.isFullscreen) { screenfull.exit(); } }
     });
   }
 
@@ -213,15 +239,15 @@
     if (scenes[currentIndex].broken) { return; }
     playing = true;
     engine.startAutorotate();
-    document.getElementById('btnPlay').classList.add('active');
-    document.getElementById('btnPlay').textContent = '❚❚';
+    var pb = document.getElementById('btnPlay');
+    pb.classList.add('active'); pb.textContent = '❚❚'; pb.setAttribute('aria-label', 'Pause auto-rotation');
   }
 
   function stopRotate() {
     playing = false;
     engine.stopAutorotate();
-    document.getElementById('btnPlay').classList.remove('active');
-    document.getElementById('btnPlay').textContent = '▶';
+    var pb = document.getElementById('btnPlay');
+    pb.classList.remove('active'); pb.textContent = '▶'; pb.setAttribute('aria-label', 'Play auto-rotation');
   }
 
   // ---------- hotspots ----------
@@ -230,8 +256,10 @@
       var idx = TourModel.sceneIndexById(TOUR.scenes, h.target);
       if (idx === -1) { return; }  // skip unknown targets (validateTour already warns)
 
-      var el = document.createElement('div');
+      var el = document.createElement('button');
+      el.type = 'button';
       el.className = 'hotspot link-hotspot';
+      el.setAttribute('aria-label', 'Go to ' + (TOUR.scenes[idx].name || 'area'));
 
       var arrow = document.createElement('span');
       arrow.className = 'link-arrow';
@@ -250,8 +278,10 @@
     });
 
     (s.data.infoHotspots || []).forEach(function (h) {
-      var el = document.createElement('div');
+      var el = document.createElement('button');
+      el.type = 'button';
       el.className = 'hotspot info-hotspot';
+      el.setAttribute('aria-label', 'Information: ' + (h.title || 'note'));
       el.appendChild(document.createTextNode('i'));
 
       var card = document.createElement('div');
