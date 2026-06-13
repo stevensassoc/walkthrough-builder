@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Walkthrough</title>
+<link rel="stylesheet" href="assets/css/viewer.css">
+</head>
+<body>
+  <div id="pano"></div>
+
+  <header id="brandHeader">
+    <div id="logoChip"><img id="logoImg" alt=""></div>
+    <div id="titleBar">
+      <span id="projTitle"></span><span id="sep"> · </span><span id="sceneTitle"></span>
+    </div>
+  </header>
+
+  <button id="railToggle" aria-label="Toggle area menu">☰</button>
+  <nav id="rail" aria-label="Areas"><div id="railList"></div></nav>
+
+  <div id="guide">
+    <button id="btnBack" class="guide-btn" aria-label="Previous area">◀ Back</button>
+    <span id="counter">1 / 1</span>
+    <button id="btnNext" class="guide-btn" aria-label="Next area">Next ▶</button>
+  </div>
+
+  <div id="controls">
+    <button id="btnZoomOut" class="ctl" aria-label="Zoom out">−</button>
+    <button id="btnZoomIn" class="ctl" aria-label="Zoom in">+</button>
+    <button id="btnPlay" class="ctl" aria-label="Play auto-rotation">▶</button>
+    <button id="btnFull" class="ctl" aria-label="Toggle fullscreen">⛶</button>
+  </div>
+
+  <div id="welcome">
+    <div id="welcomeInner">
+      <div id="welcomeLogo"><img id="welcomeLogoImg" alt=""></div>
+      <h1 id="welcomeTitle"></h1>
+      <p id="welcomeSubtitle"></p>
+      <button id="welcomeBegin">Begin Walkthrough ▶</button>
+      <p id="welcomeHint">Drag to look around · click arrows to move</p>
+    </div>
+  </div>
+
+  <div id="errorMsg" hidden></div>
+
+  <script src="assets/js/three.min.js"></script>
+  <script src="assets/js/screenfull.min.js"></script>
+  <script src="assets/js/tour-model.js"></script>
+  <script src="assets/js/pano-engine.js"></script>
+  <script src="tour.js"></script>
+  <script src="assets/js/viewer.js"></script>
+</body>
+</html>

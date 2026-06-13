@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Walkthrough Builder</title>
+<link rel="stylesheet" href="assets/css/builder.css">
+</head>
+<body>
+  <header id="topbar">
+    <div id="brand"><span id="brandMark">S&amp;A</span> Walkthrough Builder</div>
+    <input id="projTitle" class="ti" placeholder="Project title">
+    <input id="projSubtitle" class="ti" placeholder="Subtitle / date">
+    <label class="quality">Quality
+      <select id="quality">
+        <option value="6720">Max</option>
+        <option value="4096" selected>High (4096)</option>
+        <option value="2048">Web (2048)</option>
+      </select>
+    </label>
+    <span class="spacer"></span>
+    <button id="btnOpenFile" class="tb">Open</button>
+    <button id="btnSaveFile" class="tb">Save</button>
+    <button id="btnExport" class="tb primary">Export ZIP</button>
+    <button id="btnPublish" class="tb primary">Publish</button>
+    <button id="btnMyTours" class="tb">My Tours</button>
+    <button id="btnHelp" class="tb" aria-label="Help" title="Help &amp; keyboard shortcuts (?)">?</button>
+  </header>
+
+  <main id="editor">
+    <aside id="filmstrip">
+      <div class="col-label">Areas</div>
+      <div id="areaList"></div>
+      <label id="dropzone">＋ Drop panoramas<input id="fileInput" type="file" accept="image/jpeg,image/png" multiple hidden></label>
+    </aside>
+
+    <section id="stage">
+      <div id="pano"></div>
+      <div id="modebar">
+        <button class="mode active" data-mode="look">Look</button>
+        <button class="mode" data-mode="link">＋ Link</button>
+        <button class="mode" data-mode="note">＋ Note</button>
+        <button id="btnStartView">Set start view</button>
+      </div>
+      <div id="stageHint"></div>
+    </section>
+
+    <aside id="properties">
+      <div class="col-label">Properties</div>
+      <div id="propsBody"><p class="muted">Select an area or hotspot.</p></div>
+    </aside>
+  </main>
+
+  <div id="toast" hidden></div>
+  <div id="picker" hidden></div>
+
+  <div id="help" hidden>
+    <div class="help-panel">
+      <button id="helpClose" class="help-close" aria-label="Close">✕</button>
+      <h2><span id="brandMarkHelp">S&amp;A</span> Walkthrough Builder — Help</h2>
+
+      <h3>Getting started</h3>
+      <ol>
+        <li>Drag 360&deg; panorama JPGs onto <b>＋ Drop panoramas</b> (left). They're auto-resized to the chosen Quality.</li>
+        <li>Click an area to preview it; <b>drag</b> the photo to look around, scroll to zoom.</li>
+        <li>Rename areas inline; <b>drag</b> them to reorder (this sets the Next/Back order clients follow).</li>
+        <li><b>+ Link</b>, then click the photo to point to another area — set its target and aim its arrow with the direction slider. <b>+ Note</b> adds an info note.</li>
+        <li><b>Drag</b> any placed hotspot to reposition it; click one to edit or delete it.</li>
+        <li>Aim the view and press <b>Set start view</b> so each area opens facing the right way.</li>
+        <li><b>Save</b> keeps the project in this browser and downloads a project file. <b>Export ZIP</b> produces the finished tour folder &mdash; it must be <b>hosted on a web server</b> (not double-clicked); see the note shown after exporting.</li>
+      </ol>
+
+      <h3>Keyboard shortcuts</h3>
+      <table>
+        <tr><td class="k"><span class="help-key">Delete</span> / <span class="help-key">Backspace</span></td><td>Remove the selected link or note</td></tr>
+        <tr><td class="k"><span class="help-key">Esc</span></td><td>Deselect / return to Look (or close this help)</td></tr>
+        <tr><td class="k"><span class="help-key">V</span> / <span class="help-key">L</span> / <span class="help-key">N</span></td><td>Look / Add Link / Add Note modes</td></tr>
+        <tr><td class="k"><span class="help-key">&larr;</span> <span class="help-key">&uarr;</span> <span class="help-key">&rarr;</span> <span class="help-key">&darr;</span></td><td>Nudge the selected hotspot (hold <span class="help-key">Shift</span> for larger steps)</td></tr>
+        <tr><td class="k"><span class="help-key">?</span></td><td>Open this help</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div id="exported" hidden>
+    <div class="help-panel">
+      <button id="exportedClose" class="help-close" aria-label="Close">✕</button>
+      <h2>Tour exported &#10003;</h2>
+      <p>Your tour ZIP has downloaded. <b>Important:</b> this is a website folder, not a document &mdash; it has to be opened from a web server, not by double-clicking.</p>
+      <p>If you just double-click <b>index.html</b>, the buttons load but the 360&deg; photos stay blank, because browsers block local files from loading into the 3D view for security.</p>
+      <h3>To view or share it</h3>
+      <ol>
+        <li><b>Publish it</b> &mdash; upload the unzipped folder to any static web host (e.g. GitHub Pages). It works at that URL and you can share the link. <i>The upcoming Publish feature will do this for you.</i></li>
+        <li><b>Preview locally</b> &mdash; in a terminal in the folder, run <span class="help-key">python -m http.server 8000</span> and open the address it prints. (See the <b>HOW TO PUBLISH THIS TOUR.txt</b> inside the ZIP.)</li>
+      </ol>
+      <button id="exportedOk" class="tb primary" style="margin-top:16px">Got it</button>
+    </div>
+  </div>
+
+  <div id="settings" hidden>
+    <div class="help-panel">
+      <button id="settingsClose" class="help-close" aria-label="Close">✕</button>
+      <h2>Publish settings</h2>
+      <p>Publishing uploads tours to your firm's GitHub Pages site. You need a GitHub <b>personal access token (classic)</b> with the <b>repo</b> scope. <a href="https://github.com/settings/tokens" target="_blank" rel="noopener">Create one &#8599;</a></p>
+      <label>GitHub token</label><input id="setToken" type="password" placeholder="ghp_…">
+      <label>Owner (user or org)</label><input id="setOwner" value="stevensassoc">
+      <label><input id="setIsOrg" type="checkbox" checked style="width:auto;margin-right:6px">Owner is an organization</label>
+      <label>Repository</label><input id="setRepo" value="tours">
+      <label>Custom domain (optional)</label><input id="setDomain" placeholder="tours.stevensassoc.com">
+      <p class="muted" style="font-size:11px;margin-top:12px">The token grants write access to the org's repos and is stored only in this browser. Use it on trusted machines and revoke it on GitHub if a machine is lost. It is sent only to api.github.com.</p>
+      <button id="settingsSave" class="tb primary" style="margin-top:14px">Save settings</button>
+    </div>
+  </div>
+
+  <div id="published" hidden>
+    <div class="help-panel">
+      <button id="publishedClose" class="help-close" aria-label="Close">✕</button>
+      <h2>Published &#10003;</h2>
+      <p>Your tour is live at:</p>
+      <p><a id="publishedLink" href="#" target="_blank" rel="noopener" style="color:var(--accent-bright);word-break:break-all"></a></p>
+      <p class="muted" style="font-size:12px">The first publish to a new site can take ~1 minute to go live, so the link may 404 briefly. Re-publishing updates the same tour.</p>
+      <button id="publishedCopy" class="tb primary" style="margin-top:8px">Copy link</button>
+    </div>
+  </div>
+
+  <div id="mytours" hidden>
+    <div class="help-panel">
+      <button id="mytoursClose" class="help-close" aria-label="Close">✕</button>
+      <h2>My Tours</h2>
+      <div id="mytoursList"><p class="muted">Loading…</p></div>
+    </div>
+  </div>
+
+  <script src="../viewer/assets/js/three.min.js"></script>
+  <script src="../viewer/assets/js/tour-model.js"></script>
+  <script src="../viewer/assets/js/pano-engine.js"></script>
+  <script src="assets/js/jszip.min.js"></script>
+  <script src="assets/js/image-utils.js"></script>
+  <script src="assets/js/project-store.js"></script>
+  <script src="assets/js/exporter.js"></script>
+  <script src="assets/js/settings-store.js"></script>
+  <script src="assets/js/github-client.js"></script>
+  <script src="assets/js/publisher.js"></script>
+  <script src="assets/js/builder.js"></script>
+</body>
+</html>
