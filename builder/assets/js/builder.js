@@ -416,6 +416,7 @@
     openModalEl('settings');
   }
   function initPublishSettings() {
+    document.getElementById('btnSettings').addEventListener('click', openSettings);
     document.getElementById('settingsClose').addEventListener('click', function () { document.getElementById('settings').hidden = true; });
     document.getElementById('settingsSave').addEventListener('click', function () {
       var s = {
