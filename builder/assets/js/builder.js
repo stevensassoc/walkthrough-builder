@@ -408,11 +408,12 @@
   var SS = window.SettingsStore;
   function openSettings() {
     var s = SS.load() || {};
+    var D = SS.DEFAULTS;
     document.getElementById('setToken').value = s.token || '';
-    document.getElementById('setOwner').value = s.owner || 'stevensassoc';
+    document.getElementById('setOwner').value = s.owner || D.owner;
     document.getElementById('setIsOrg').checked = s.isOrg !== false;
-    document.getElementById('setRepo').value = s.repo || 'tours';
-    document.getElementById('setDomain').value = s.customDomain || '';
+    document.getElementById('setRepo').value = s.repo || D.repo;
+    document.getElementById('setDomain').value = s.customDomain != null ? s.customDomain : D.customDomain;
     openModalEl('settings');
   }
   function initPublishSettings() {
@@ -423,7 +424,7 @@
         token: document.getElementById('setToken').value.trim(),
         owner: document.getElementById('setOwner').value.trim(),
         isOrg: document.getElementById('setIsOrg').checked,
-        repo: document.getElementById('setRepo').value.trim() || 'tours',
+        repo: document.getElementById('setRepo').value.trim() || SS.DEFAULTS.repo,
         customDomain: document.getElementById('setDomain').value.trim()
       };
       if (!SS.isComplete(s)) { toast('Token, owner and repo are required.'); return; }
@@ -486,7 +487,7 @@
     if (err && err.status === 403) {
       var remaining = err.headers && err.headers.get && err.headers.get('x-ratelimit-remaining');
       if (remaining === '0') { return 'GitHub rate limit hit — wait a few minutes and try again.'; }
-      return 'GitHub refused this — the org may block classic tokens (see Settings), or you lack permission.';
+      return 'GitHub refused this — the org may not have approved the token yet, or it lacks Contents/Pages write on the tours repo (see Settings).';
     }
     var detail = (err && err.message) || (err && err.status && ('HTTP ' + err.status)) ||
       (err && err.data && err.data.message) || 'see the browser console (F12)';

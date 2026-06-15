@@ -104,13 +104,13 @@
     <div class="help-panel">
       <button id="settingsClose" class="help-close" aria-label="Close">✕</button>
       <h2>Publish settings</h2>
-      <p>Publishing uploads tours to your firm's GitHub Pages site. You need a GitHub <b>personal access token (classic)</b> with the <b>repo</b> scope. <a href="https://github.com/settings/tokens" target="_blank" rel="noopener">Create one &#8599;</a></p>
-      <label>GitHub token</label><input id="setToken" type="password" placeholder="ghp_…">
+      <p>Publishing uploads tours to your firm's GitHub Pages site. You need a GitHub <b>fine-grained personal access token</b> scoped to only the <b>tours</b> repo, with <b>Contents</b> and <b>Pages</b> both set to <b>Read and write</b>. <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Create one &#8599;</a></p>
+      <label>GitHub token</label><input id="setToken" type="password" placeholder="github_pat_…">
       <label>Owner (user or org)</label><input id="setOwner" value="stevensassoc">
       <label><input id="setIsOrg" type="checkbox" checked style="width:auto;margin-right:6px">Owner is an organization</label>
       <label>Repository</label><input id="setRepo" value="tours">
-      <label>Custom domain (optional)</label><input id="setDomain" placeholder="tours.stevensassoc.com">
-      <p class="muted" style="font-size:11px;margin-top:12px">The token grants write access to the org's repos and is stored only in this browser. Use it on trusted machines and revoke it on GitHub if a machine is lost. It is sent only to api.github.com. For tighter scope, a <b>fine-grained token</b> limited to the <b>tours</b> repo (Contents + Pages: write) also works.</p>
+      <label>Custom domain (optional)</label><input id="setDomain" placeholder="tours.stevens-assoc.com">
+      <p class="muted" style="font-size:11px;margin-top:12px">Scoped this way the token can only write to the <b>tours</b> repo — not the rest of the org. Give it an <b>expiration</b>, use it on trusted machines, and revoke it on GitHub if a machine is lost. It is stored only in this browser and sent only to api.github.com. (The <b>tours</b> repo must already exist — a single-repo token can't create it; see the setup checklist.)</p>
       <div style="display:flex;gap:8px;margin-top:14px">
         <button id="settingsSave" class="tb primary">Save settings</button>
         <button id="settingsClear" class="tb">Clear saved token</button>
@@ -164,6 +164,7 @@
   <script src="assets/js/exporter.js"></script>
   <script src="assets/js/settings-store.js"></script>
   <script src="assets/js/github-client.js"></script>
+  <script src="assets/js/site-pages.js"></script>
   <script src="assets/js/publisher.js"></script>
   <script src="assets/js/builder.js"></script>
 </body>

@@ -8,6 +8,9 @@
 })(typeof window !== 'undefined' ? window : globalThis, function (root) {
   'use strict';
 
+  // Browser loads site-pages.js before this; Node (tests) resolves it relatively.
+  var SitePages = root.SitePages || (typeof require === 'function' ? require('./site-pages.js') : null);
+
   function tourUrl(settings, slug) {
     if (settings.customDomain) {
       return 'https://' + settings.customDomain.replace(/\/+$/, '') + '/' + slug + '/';
@@ -117,6 +120,12 @@
         specs.push({ path: 'tours.json', content: JSON.stringify(newIndex, null, 2), encoding: 'utf-8' });
         var customDomain = p.settings && p.settings.customDomain;   // one source of truth (matches tourUrl)
         if (customDomain) { specs.push({ path: 'CNAME', content: customDomain, encoding: 'utf-8' }); }
+        // Branded root pages (splash + 404), refreshed every publish like CNAME. The
+        // logo is embedded as a data URI so both render anywhere with no off-domain fetch.
+        var logoFile = p.files.filter(function (f) { return f.path === 'assets/logo.png'; })[0];
+        var logoDataUri = logoFile ? 'data:image/png;base64,' + logoFile.content : '';
+        specs.push({ path: 'index.html', content: SitePages.landingHtml(logoDataUri), encoding: 'utf-8' });
+        specs.push({ path: '404.html', content: SitePages.notFoundHtml(logoDataUri), encoding: 'utf-8' });
         // Commit first (this creates `main` with content), THEN enable Pages — so
         // the branch always exists before Pages is turned on.
         return commitFiles(client, p.owner, p.repo, branch, specs, 'Publish ' + p.slug).then(function () {
